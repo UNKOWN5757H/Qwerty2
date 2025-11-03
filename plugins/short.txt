@@ -1,0 +1,329 @@
+# bot/short.py
+
+import re
+from bot import Bot
+from urllib.parse import urlparse
+from pyrogram import filters
+from pyrogram.errors.pyromod.listener_timeout import ListenerTimeout
+from pyrogram.types import (
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardMarkup,
+    ReplyKeyboardRemove,
+)
+from shortzy import Shortzy #type: ignore
+
+from database.database import kingdb
+from config import OWNER_ID
+
+
+async def get_variable(key, default=None):
+    return await kingdb.get_variable(key, default)
+
+
+async def set_variable(key, value):
+    await kingdb.set_variable(key, value)
+
+@Bot.on_message(filters.command("short") & filters.user(OWNER_ID) & filters.private)
+async def short(client, message):
+    """Display shortener settings"""
+    a = await get_variable("api", "None")
+    c = await get_variable("bypass", "0")
+    b = await get_variable("website", "None")
+    aba = await get_variable("short", "")
+    mode = await get_variable("mode", "I")
+    
+    if aba and mode == "24":
+        d = "𝟐𝟒𝐇 ✅"
+        e = "✅"
+        f = ""
+    elif aba and mode == "link":
+        d = "𝐏𝐄𝐑 𝐋𝐈𝐍𝐊 ✅"
+        f = "✅"
+        e = ""
+    elif not aba:
+        d = "❌"
+        e = ""
+        f = ""
+    else:
+        d = ""
+        e = ""
+        f = ""
+        
+    g = await get_variable("token_time", 0)
+
+    total_seconds = int(g)
+    hours = total_seconds // 3600
+    minutes = (total_seconds % 3600) // 60
+    seconds = total_seconds % 60
+
+    time_parts = []
+    if hours:
+        time_parts.append(f"{hours} hour{'s' if hours > 1 else ''}")
+    if minutes:
+        time_parts.append(f"{minutes} minute{'s' if minutes > 1 else ''}")
+    if seconds and not hours:
+        time_parts.append(f"{seconds} second{'s' if seconds > 1 else ''}")
+
+    g = " ".join(time_parts) if time_parts else "0 seconds"
+
+    txt = (
+        f"<blockquote expandable>♻️ 𝐒𝐇𝐎𝐑𝐓𝐍𝐄𝐑 𝐒𝐄𝐓𝐓𝐈𝐍𝐆𝐒 💠</blockquote>\n"
+        f"<blockquote>💥 𝐒𝐇𝐎𝐑𝐓𝐍𝐄𝐑 𝐌𝐎𝐃𝐄: {d} </blockquote>\n"
+        f"<blockquote>⭐ 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐓𝐈𝐎𝐍 𝐓𝐈𝐌𝐄 : {g} </blockquote>\n"
+        f"<blockquote expandable>⚠️ 𝐀𝐏𝐈 : {a}</blockquote>\n"
+        f"<blockquote expandable>🌐 𝐖𝐄𝐁𝐒𝐈𝐓𝐄 : {b}</blockquote>\n"
+        f"<blockquote expandable>𝐋𝐈𝐍𝐊𝐒 𝐁𝐘𝐏𝐀𝐒𝐒𝐄𝐃 : {c}</blockquote>"
+    )
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [InlineKeyboardButton("𝐑𝐄𝐌𝐎𝐕𝐄 𝐒𝐇𝐎𝐑𝐓𝐄𝐑 ❌", callback_data="short_rem")],
+            [
+                InlineKeyboardButton(f"𝟐𝟒𝐇 𝐌𝐎𝐃𝐄 {e}", callback_data="mode_24"),
+                InlineKeyboardButton(f"𝐏𝐄𝐑 𝐋𝐈𝐍𝐊 𝐌𝐎𝐃𝐄 {f}", callback_data="mode_link"),
+            ],
+            [
+                InlineKeyboardButton("𝐂𝐇𝐀𝐍𝐆𝐄 𝐖𝐄𝐁𝐒𝐈𝐓𝐄 ", callback_data="short_web"),
+                InlineKeyboardButton("𝐂𝐇𝐀𝐍𝐆𝐄 𝐀𝐏𝐈", callback_data="short_api"),
+            ],
+            [
+                InlineKeyboardButton("ϲℓοѕє", callback_data="close"),
+            ],
+        ]
+    )
+
+    await message.reply_photo(
+        photo="https://i.ibb.co/5xtpFb2T/f4faad6ca1c1.jpg",
+        caption=txt,
+        reply_markup=keyboard,
+    )
+
+
+async def short2(client, query):
+    """Handle shortener web/api changes"""
+    uid = query.from_user.id
+    
+    # Check if user is owner
+    if uid != OWNER_ID:
+        await query.answer(
+            "❌ ϐακκα!, γου αяє иοτ αℓℓοωє∂ το υѕє τнє ϐυττοи", show_alert=True
+        )
+        return
+        
+    action = query.data.split("_")[1]
+    txt = "<blockquote expandable>𝐏𝐋𝐄𝐀𝐒𝐄 𝐒𝐄𝐍𝐃 𝐌𝐄 𝐒𝐇𝐎𝐑𝐓𝐍𝐄𝐑 𝐖𝐄𝐁𝐒𝐈𝐓𝐄 </blockquote>"
+    tot = "<blockquote expandable>𝐏𝐋𝐄𝐀𝐒𝐄 𝐒𝐄𝐍𝐃 𝐌𝐄 𝐒𝐇𝐎𝐑𝐓𝐍𝐄𝐑 𝐖𝐄𝐁𝐒𝐈𝐓𝐄 𝐀𝐏𝐈</blockquote>"
+    
+    if action == "web":
+        while True:
+            b = await client.send_message(
+                uid,
+                text=txt,
+                reply_markup=ReplyKeyboardMarkup(
+                    [["❌ Cancel"]], one_time_keyboard=True, resize_keyboard=True
+                ),
+            )
+            try:
+                a = await client.listen(timeout=30, chat_id=uid)
+            except ListenerTimeout:
+                await client.send_message(
+                    chat_id=uid,
+                    text="⏳ Timeout! Setup cancelled.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                await b.delete()
+                break
+                
+            if a.text.lower() == "❌ cancel":
+                await client.send_message(
+                    chat_id=uid,
+                    text="❌ WEBSITE setup cancelled.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                await b.delete()
+                break
+
+            try:
+                parsed_url = urlparse(a.text)
+            except BaseException:
+                await client.send_message(
+                    chat_id=uid,
+                    text="Please send me full website link like https://example.com",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                await b.delete()
+                continue
+
+            if (
+                parsed_url.scheme == "https"
+                and parsed_url.netloc
+                and not parsed_url.path.strip("/")
+            ):
+                pass
+            else:
+                await client.send_message(
+                    chat_id=uid,
+                    text="Please send me full website link like https://example.com",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                await b.delete()
+                continue
+
+            await set_variable("website", a.text)
+            await client.send_message(
+                chat_id=uid, text="✅ 𝐖𝐄𝐁𝐒𝐈𝐓𝐄 𝐀𝐃𝐃𝐄𝐃 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋𝐋𝐘 "
+            )
+            await b.delete()
+            await short(client, query.message)
+            await query.message.delete()
+            break
+            
+    if action == "api":
+        while True:
+            b = await client.send_message(
+                uid,
+                text=tot,
+                reply_markup=ReplyKeyboardMarkup(
+                    [["❌ Cancel"]], one_time_keyboard=True, resize_keyboard=True
+                ),
+            )
+            try:
+                a = await client.listen(timeout=30, chat_id=uid)
+            except ListenerTimeout:
+                await client.send_message(
+                    chat_id=uid,
+                    text="⏳ Timeout! Setup cancelled.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                await b.delete()
+                break
+                
+            if a.text.lower() == "❌ cancel":
+                await client.send_message(
+                    chat_id=uid,
+                    text="❌ API setup cancelled.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                await b.delete()
+                break
+                
+            await set_variable("api", a.text)
+            await client.send_message(chat_id=uid, text="✅ 𝐀𝐏𝐈 𝐀𝐃𝐃𝐄𝐃 𝐒𝐔𝐂𝐂𝐄𝐒𝐒𝐅𝐔𝐋𝐋𝐘 ")
+            await b.delete()
+            await short(client, query.message)
+            await query.message.delete()
+            break
+
+
+async def short3(client, query):
+    """Remove shortener"""
+    uid = query.from_user.id
+    
+    if uid != OWNER_ID:
+        await query.answer(
+            "❌ ϐακκα!, γου αяє иοτ αℓℓοωє∂ το υѕє τнє ϐυττοи", show_alert=True
+        )
+        return
+        
+    aba = await get_variable("short", None)
+    if aba:
+        await set_variable("short", False)
+        await set_variable("mode", None)
+        await short(client, query.message)
+        await query.message.delete()
+    else:
+        await query.answer(
+            "Invalid Input, Shortner is already removed", show_alert=True
+        )
+
+
+async def short4(client, query):
+    """Handle shortener mode changes"""
+    uid = query.from_user.id
+    
+    if uid != OWNER_ID:
+        await query.answer(
+            "❌ ϐακκα!, γου αяє иοτ αℓℓοωє∂ το υѕє τнє ϐυττοи", show_alert=True
+        )
+        return
+
+    action = query.data.split("_")[1]
+
+    if action == "link":
+        aba = await get_variable("short", None)
+        if not aba:
+            await set_variable("short", True)
+        await set_variable("mode", "link")
+        await short(client, query.message)
+        await query.message.delete()
+        
+    elif action == "24":
+        while True:
+            try:
+                b = await query.message.edit(
+                    text=(
+                        "⚠️ 𝐒𝐞𝐧𝐝 𝐒𝐇𝐎𝐑𝐓𝐍𝐄𝐑 𝐕𝐄𝐑𝐈𝐅𝐈𝐂𝐀𝐓𝐈𝐎𝐍 𝐓𝐢𝐦𝐞 𝐅𝐨𝐫𝐦𝐚𝐭 ----->\n"
+                        "<blockquote>Xh - ꜰᴏʀ x ʜᴏᴜʀꜱ, ᴇx: 1h {ᴏɴᴇ ʜᴏᴜʀ},\n"
+                        "Xm - ꜰᴏʀ x ᴍɪɴᴜᴛᴇꜱ, ᴇx: 1m {ᴏɴᴇ ᴍɪɴᴜᴛᴇ},\n"
+                        "Xs - ꜰᴏʀ x ꜱᴇᴄᴏɴᴅꜱ, ᴇx: 1s {ᴏɴᴇ ꜱᴇᴄᴏɴᴅ}</blockquote>"
+                    ),
+                    reply_markup=ReplyKeyboardMarkup(
+                        [["❌ Cancel"]], one_time_keyboard=True, resize_keyboard=True
+                    ),
+                )
+            except BaseException:
+                pass
+
+            try:
+                a = await client.listen(chat_id=uid, timeout=30)
+            except ListenerTimeout:
+                await client.send_message(
+                    chat_id=uid,
+                    text="⏳ Timeout! Setup cancelled.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
+                break
+
+            if a.text.lower() == "❌ cancel":
+                await b.edit(
+                    "❌ Timer setup cancelled.", reply_markup=ReplyKeyboardRemove()
+                )
+                break
+
+            time_pattern = re.match(r"^(\d+)([hms])$", a.text.lower())
+
+            if time_pattern:
+                value, unit = int(time_pattern.group(1)), time_pattern.group(2)
+
+                if unit == "h":
+                    ab = f"{value * 3600}"
+                elif unit == "m":
+                    ab = f"{value * 60}"
+                elif unit == "s":
+                    ab = str(value)
+                    
+                await set_variable("token_time", ab)
+                await b.delete()
+                aba = await get_variable("short", None)
+                if not aba:
+                    await set_variable("short", True)
+                await set_variable("mode", "24")
+                await short(client, query.message)
+                await query.message.delete()
+                break
+            else:
+                await a.reply_text(
+                    "❌ Invalid format! Try again (e.g., `1h`, `30m`, `45s`)."
+                )
+
+
+async def get_shortlink(link):
+    """Generate short link"""
+    url = await get_variable("website")
+    if url and url.startswith("https://"):
+        url = url.replace("https://", "", 1)
+    api = await get_variable("api")
+    shortzy = Shortzy(api_key=api, base_site=url)
+    link = await shortzy.convert(link)
+    return link
