@@ -6,35 +6,35 @@ from logging.handlers import RotatingFileHandler
 
 
 #Bot token @Botfather, --⚠️ REQUIRED--
-TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "8380940816:AAHir0XqVUb-sHgqssdxzPDT7LE8BcW1n_I")
+TG_BOT_TOKEN = os.environ.get("TG_BOT_TOKEN", "7845953013:AAHzfeeR3im_jhT1yMxZ8TMzgU0ahhS80ag")
 
 #Your API ID from my.telegram.org, --⚠️ REQUIRED--
-APP_ID = int(os.environ.get("APP_ID", "20239261"))
+APP_ID = int(os.environ.get("APP_ID", "2468192"))
 
 #Your API Hash from my.telegram.org, --⚠️ REQUIRED--
-API_HASH = os.environ.get("API_HASH", "af61dab399ed3220a3a81570b56bd29d")
+API_HASH = os.environ.get("API_HASH", "4906b3f8f198ec0e24edb2c197677678")
 
 #Your db channel Id --⚠️ REQUIRED--
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002066420558"))
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1001753089099"))
 
 #OWNER ID --⚠️ REQUIRED--
-OWNER_ID = int(os.environ.get("OWNER_ID", "1357978966"))
+OWNER_ID = int(os.environ.get("OWNER_ID", "2098589219"))
 
 #SUPPORT_GROUP: This is used for normal users for getting help if they don't understand how to use the bot --⚠ OPTIONAL--
 SUPPORT_GROUP = os.environ.get("SUPPORT_GROUP", "")
 
 #Port
-PORT = os.environ.get("PORT", "8020")
+PORT = os.environ.get("PORT", "8080")
 
 #Database --⚠️ REQUIRED--
-DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://jddhanush85:jayaraman143@cluster0.cmj1w.mongodb.net/?retryWrites=true&w=majority")
+DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://Filter01:ei62heT4O81OyNyl@Filter01.6kyybcz.mongodb.net/?retryWrites=true&w=majority&appName=Filter01")
 
-DB_NAME = os.environ.get("DATABASE_NAME", "adbotv2XlightXtest-6")
+DB_NAME = os.environ.get("DATABASE_NAME", "FILESTORE1")
 
 TG_BOT_WORKERS = int(os.environ.get("TG_BOT_WORKERS", "4"))
 
 #Collection of pics for Bot // #Optional but atleast one pic link should be replaced if you don't want predefined links
-PICS = (os.environ.get("PICS", "https://telegra.ph/file/5094c60f1122bbae9b3d9.jpg https://telegra.ph/file/463501fe337f02dc034ba.jpg https://telegra.ph/file/ad3486519fd59f73f7f46.jpg https://telegra.ph/file/8d4867e3d7d8e8db70f73.jpg https://telegra.ph/file/3b8897b58d83a512a56ac.jpg https://telegra.ph/file/11115f9a5c035e2d90bd8.jpg https://telegra.ph/file/a292bc4b99f9a1854f6d7.jpg https://telegra.ph/file/94aac0f8141dc44eadfc6.jpg https://telegra.ph/file/1f8d855fb7a70b4fcaf68.jpg https://telegra.ph/file/849b567f8072117353c5c.jpg https://telegra.ph/file/e8555407480d52ac1a6b7.jpg https://telegra.ph/file/2a301e221bf3c800bb48c.jpg https://telegra.ph/file/faefbf4a710eb05647d9c.jpg https://telegra.ph/file/6219c9d5edbeecfd3a45e.jpg https://telegra.ph/file/db1f952a28b0aa53bedb1.jpg https://telegra.ph/file/32797f53236187e9f5e1f.jpg https://telegra.ph/file/f1038a205b9db5018f1aa.jpg https://telegra.ph/file/88fb9950df687ff6caa58.jpg https://telegra.ph/file/63855c358fdd9a02c717c.jpg https://telegra.ph/file/34fb4b74d70bfc2e9d59c.jpg https://telegra.ph/file/e92c0b6efb0a77b316e04.jpg https://telegra.ph/file/2f3adfb321584ad39fd15.jpg")).split() 
+PICS = (os.environ.get("PICS", "https://telegra.ph/file/9107275ff1d9b71db6bec.jpg")).split()
 
 #set your Custom Caption here, Keep None for Disable Custom Caption
 CUSTOM_CAPTION = os.environ.get("CUSTOM_CAPTION", None)
