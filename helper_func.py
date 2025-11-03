@@ -234,3 +234,78 @@ def get_readable_time(seconds: int) -> str:
 subscribed = filters.create(is_subscribed)
 is_admin = filters.create(check_admin)
 banUser = filters.create(check_banUser)
+
+
+#=============================================================================================================================================================================
+# -------------------- SEND FILE(S) BY MESSAGE ID(S) -------------------- 
+#=============================================================================================================================================================================
+
+from pyrogram.errors import FloodWait, Forbidden, PeerIdInvalid
+
+async def send_file_by_id(client, message, first_msg_id: int, last_msg_id: int = None):
+    """
+    Send a single file or a batch of files from the DB channel to the user.
+    Handles FloodWait, invalid peer, and forbidden errors gracefully.
+    """
+    try:
+        user_id = message.from_user.id
+        channel_id = client.db_channel.id
+
+        # If last_msg_id is None, send only one file
+        if not last_msg_id or first_msg_id == last_msg_id:
+            try:
+                await client.copy_message(
+                    chat_id=user_id,
+                    from_chat_id=channel_id,
+                    message_id=first_msg_id
+                )
+                return
+            except FloodWait as e:
+                await asyncio.sleep(e.value)
+                await client.copy_message(
+                    chat_id=user_id,
+                    from_chat_id=channel_id,
+                    message_id=first_msg_id
+                )
+            except (Forbidden, PeerIdInvalid):
+                await message.reply_text("<b>❌ Cannot send file. User blocked the bot or invalid chat.</b>")
+            except Exception as e:
+                await message.reply_text(f"<b>⚠️ Failed to send file.</b>\n<code>{e}</code>")
+            return
+
+        # If batch range given
+        if first_msg_id > last_msg_id:
+            first_msg_id, last_msg_id = last_msg_id, first_msg_id
+
+        msg_ids = list(range(first_msg_id, last_msg_id + 1))
+        total = len(msg_ids)
+
+        await message.reply_text(f"<b>📤 Sending {total} files...</b>")
+
+        for msg_id in msg_ids:
+            try:
+                await client.copy_message(
+                    chat_id=user_id,
+                    from_chat_id=channel_id,
+                    message_id=msg_id
+                )
+                await asyncio.sleep(0.5)  # prevent rate limits
+            except FloodWait as e:
+                await asyncio.sleep(e.value)
+                await client.copy_message(
+                    chat_id=user_id,
+                    from_chat_id=channel_id,
+                    message_id=msg_id
+                )
+            except Forbidden:
+                await message.reply_text("<b>❌ Cannot send file. User blocked the bot.</b>")
+                break
+            except Exception as e:
+                print(f"!Error sending msg {msg_id}: {e}")
+                continue
+
+        await message.reply_text("<b>✅ All available files sent successfully!</b>")
+
+    except Exception as e:
+        print(f"Error in send_file_by_id(): {e}")
+        await message.reply_text("<b>⚠️ Error while sending files.</b>")
