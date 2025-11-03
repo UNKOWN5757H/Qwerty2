@@ -5,7 +5,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import FloodWait
 
 from bot import Bot
-from config import CHANNEL_ID
+from config import CHANNEL_ID,  BASE_URL 
 from helper_func import encode, is_admin
 command_list = 'start users broadcast batch genlink help cmd info add_fsub fsub_chnl restart del_fsub add_admins del_admins admin_list cancel auto_del forcesub files add_banuser del_banuser banuser_list status req_fsub short premiumlist rempremium addpremium'.split()
 
@@ -43,7 +43,7 @@ async def new_post(client: Client, message: Message):
     converted_id = message.id * abs(client.db_channel.id)
     string = f"get-{converted_id}"
     base64_string = await encode(string)
-    link = f"https://t.me/{client.username}?start={base64_string}"
+    link = f"{BASE_URL}?start={base64_string}"
     reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton("🔁 Share URL", url=f'https://telegram.me/share/url?url={link}')]])
     try:
         await message.edit_reply_markup(reply_markup)
