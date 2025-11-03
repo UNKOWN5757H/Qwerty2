@@ -4,182 +4,47 @@ import os
 import sys
 import random
 import asyncio
-import subprocess
-from bot import Bot
-from database.database import kingdb
+from datetime import datetime
 from pyrogram import Client, filters
 from pyrogram.errors import FloodWait
-from plugins.FORMATS import START_MSG, FORCE_MSG
 from pyrogram.enums import ParseMode, ChatAction
-from config import CUSTOM_CAPTION, OWNER_ID, PICS, BASE_URL
-from plugins.autoDelete import auto_del_notification, delete_message
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from helper_func import banUser, is_userJoin, is_admin, subscribed, encode, decode, get_messages
 
-# Import premium and shortener functions at the top
+from bot import Bot
+from config import CUSTOM_CAPTION, OWNER_ID, PICS, BASE_URL
+from database.database import kingdb
+from helper_func import banUser, is_userJoin, is_admin, subscribed, encode, decode, get_messages
+from plugins.autoDelete import auto_del_notification, delete_message
+from plugins.FORMATS import START_MSG, FORCE_MSG
 from plugins.premium import isprem
 from plugins.short import get_shortlink
 
 
+# ==========================================================================================
+# /start command (handles both normal start and file retrieval)
+# ==========================================================================================
 @Bot.on_message(filters.command('start') & filters.private & ~banUser & subscribed)
-async def start_command(client: Client, message: Message): 
+async def start_command(client: Client, message: Message):
     await message.reply_chat_action(ChatAction.CHOOSE_STICKER)
-    id = message.from_user.id  
-    
-    if not await kingdb.present_user(id):
-        try: 
-            await kingdb.add_user(id)
-        except: 
+    user_id = message.from_user.id
+
+    # Add user to DB if not present
+    if not await kingdb.present_user(user_id):
+        try:
+            await kingdb.add_user(user_id)
+        except:
             pass
-                
-    text = message.text        
-    if len(text) > 7:
-        await message.delete()
 
-        try: 
-            base64_string = text.split(" ", 1)[1]
-        except: 
-            return
-        
-        # Check if shortener should be applied
-        user_is_premium = await isprem(id)
-        short_enabled = await kingdb.get_variable("short", False)
-        short_mode = await kingdb.get_variable("mode", "I")
-
-        # If user is not premium and shortener is enabled
-        if not user_is_premium and short_enabled:
-            # Generate short link for non-premium users
-            full_link = f"{BASE_URL}?start={base64_string}"
-            
-            if short_mode == "link":
-                # Per-link mode: shorten every request
-                try:
-                    short_link = await get_shortlink(full_link)
-                    await message.reply(
-                        f"🔗 <b>Your shortened link:</b>\n\n{short_link}\n\n"
-                        f"<i>💎 Upgrade to premium to skip shorteners!</i>",
-                        disable_web_page_preview=True
-                    )
-                    return
-                except Exception as e:
-                    print(f"Error generating short link: {e}")
-                    # Continue with normal file sending if shortener fails
-            
-            elif short_mode == "24":
-                # 24-hour verification mode
-                token_time = await kingdb.get_variable("token_time", 0)
-                # Implement your 24-hour token verification logic here
-                # This typically involves storing user verification status in database
-                pass
-                
-        string = await decode(base64_string)
-        argument = string.split("-")
-        
-        if len(argument) == 3:
-            try:
-                start = int(int(argument[1]) / abs(client.db_channel.id))
-                end = int(int(argument[2]) / abs(client.db_channel.id))
-            except:
-                return
-                    
-            if start <= end:
-                ids = range(start, end + 1)
-            else:
-                ids = []
-                i = start
-                while True:
-                    ids.append(i)
-                    i -= 1
-                    if i < end:
-                        break
-                            
-        elif len(argument) == 2:
-            try: 
-                ids = [int(int(argument[1]) / abs(client.db_channel.id))]
-            except: 
-                return
-                    
-        last_message = None
-        await message.reply_chat_action(ChatAction.UPLOAD_DOCUMENT)  
-        
-        try: 
-            messages = await get_messages(client, ids)
-        except: 
-            return await message.reply("<b><i>Sᴏᴍᴇᴛʜɪɴɢ ᴡᴇɴᴛ ᴡʀᴏɴɢ..!</i></b>")
-            
-        AUTO_DEL, DEL_TIMER, HIDE_CAPTION, CHNL_BTN, PROTECT_MODE = await asyncio.gather(
-            kingdb.get_auto_delete(), 
-            kingdb.get_del_timer(), 
-            kingdb.get_hide_caption(), 
-            kingdb.get_channel_button(), 
-            kingdb.get_protect_content()
-        )   
-        if CHNL_BTN: 
-            button_name, button_link = await kingdb.get_channel_button_link()
-            
-        for idx, msg in enumerate(messages):
-            if bool(CUSTOM_CAPTION) & bool(msg.document):
-                caption = CUSTOM_CAPTION.format(
-                    previouscaption="" if not msg.caption else msg.caption.html, 
-                    filename=msg.document.file_name
-                )
-
-            elif HIDE_CAPTION and (msg.document or msg.audio):
-                caption = ""
-
-            else:
-                caption = "" if not msg.caption else msg.caption.html
-
-            if CHNL_BTN:
-                reply_markup = InlineKeyboardMarkup([[InlineKeyboardButton(text=button_name, url=button_link)]]) if msg.document or msg.photo or msg.video or msg.audio else None
-            else:
-                reply_markup = msg.reply_markup   
-                    
-            try:
-                copied_msg = await msg.copy(
-                    chat_id=id, 
-                    caption=caption, 
-                    parse_mode=ParseMode.HTML, 
-                    reply_markup=reply_markup, 
-                    protect_content=PROTECT_MODE
-                )
-                await asyncio.sleep(0.1)
-
-                if AUTO_DEL:
-                    asyncio.create_task(delete_message(copied_msg, DEL_TIMER))
-                    if idx == len(messages) - 1: 
-                        last_message = copied_msg
-
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                copied_msg = await msg.copy(
-                    chat_id=id, 
-                    caption=caption, 
-                    parse_mode=ParseMode.HTML, 
-                    reply_markup=reply_markup, 
-                    protect_content=PROTECT_MODE
-                )
-                await asyncio.sleep(0.1)
-                
-                if AUTO_DEL:
-                    asyncio.create_task(delete_message(copied_msg, DEL_TIMER))
-                    if idx == len(messages) - 1: 
-                        last_message = copied_msg
-                        
-        if AUTO_DEL and last_message:
-            asyncio.create_task(auto_del_notification(client.username, last_message, DEL_TIMER, message.command[1]))
-                        
-    else:   
+    text = message.text
+    if len(text) <= 7:
+        # Normal /start message
         reply_markup = InlineKeyboardMarkup([
             [
-                InlineKeyboardButton('🤖 About me', callback_data='about'), 
+                InlineKeyboardButton('🤖 About me', callback_data='about'),
                 InlineKeyboardButton('Settings ⚙️', callback_data='setting')
             ],
-            [
-                InlineKeyboardButton('💎 Get Premium', callback_data='premium')
-            ]
+            [InlineKeyboardButton('💎 Get Premium', callback_data='premium')]
         ])
-        
         await message.reply_photo(
             photo=random.choice(PICS),
             caption=START_MSG.format(
@@ -189,75 +54,173 @@ async def start_command(client: Client, message: Message):
                 mention=message.from_user.mention,
                 id=message.from_user.id
             ),
-            reply_markup=reply_markup,
-            #message_effect_id=5104841245755180586  # 🔥
+            reply_markup=reply_markup
         )
-        try: 
+        try:
             await message.delete()
-        except: 
+        except:
             pass
+        return
 
-   
-##===================================================================================================================##
-#TRIGGRED START MESSAGE FOR HANDLE FORCE SUB MESSAGE AND FORCE SUB CHANNEL IF A USER NOT JOINED A CHANNEL
-##===================================================================================================================##   
+    # Parameter detected (/start something)
+    await message.delete()
+    try:
+        param = text.split(" ", 1)[1]
+    except:
+        return
+
+    # Check if the link is new-style (date + random) or old base64
+    if param[:8].isdigit():
+        # ---------------- NEW DATE-BASED LINK ---------------- #
+        file_data = await kingdb.get_link(param)
+        if not file_data:
+            return await message.reply("<b>⚠️ This link is invalid or expired!</b>", quote=True)
+
+        first_id = file_data.get("first_msg_id")
+        last_id = file_data.get("last_msg_id")
+
+        try:
+            await message.reply_chat_action(ChatAction.UPLOAD_DOCUMENT)
+            ids = range(first_id, last_id + 1) if last_id else [first_id]
+            messages = await get_messages(client, ids)
+        except Exception as e:
+            print(f"Error while fetching messages for code {param}: {e}")
+            return await message.reply("<b><i>Something went wrong while retrieving files!</i></b>")
+
+    else:
+        # ---------------- OLD BASE64 LINK ---------------- #
+        try:
+            string = await decode(param)
+            argument = string.split("-")
+        except Exception as e:
+            print(f"Decode failed for {param}: {e}")
+            return
+
+        if len(argument) == 3:
+            try:
+                start = int(int(argument[1]) / abs(client.db_channel.id))
+                end = int(int(argument[2]) / abs(client.db_channel.id))
+            except:
+                return
+            ids = range(start, end + 1) if start <= end else list(range(start, end - 1, -1))
+        elif len(argument) == 2:
+            try:
+                ids = [int(int(argument[1]) / abs(client.db_channel.id))]
+            except:
+                return
+        else:
+            return
+
+        await message.reply_chat_action(ChatAction.UPLOAD_DOCUMENT)
+        try:
+            messages = await get_messages(client, ids)
+        except:
+            return await message.reply("<b><i>Something went wrong!</i></b>")
+
+    # ---------------- Send Files ---------------- #
+    AUTO_DEL, DEL_TIMER, HIDE_CAPTION, CHNL_BTN, PROTECT_MODE = await asyncio.gather(
+        kingdb.get_auto_delete(),
+        kingdb.get_del_timer(),
+        kingdb.get_hide_caption(),
+        kingdb.get_channel_button(),
+        kingdb.get_protect_content()
+    )
+
+    button_name, button_link = (await kingdb.get_channel_button_link()) if CHNL_BTN else (None, None)
+
+    last_message = None
+    for idx, msg in enumerate(messages):
+        if bool(CUSTOM_CAPTION) and bool(msg.document):
+            caption = CUSTOM_CAPTION.format(
+                previouscaption=msg.caption.html if msg.caption else "",
+                filename=msg.document.file_name
+            )
+        elif HIDE_CAPTION and (msg.document or msg.audio):
+            caption = ""
+        else:
+            caption = msg.caption.html if msg.caption else ""
+
+        reply_markup = (
+            InlineKeyboardMarkup([[InlineKeyboardButton(text=button_name, url=button_link)]])
+            if CHNL_BTN and (msg.document or msg.photo or msg.video or msg.audio)
+            else msg.reply_markup
+        )
+
+        try:
+            copied = await msg.copy(
+                chat_id=user_id,
+                caption=caption,
+                parse_mode=ParseMode.HTML,
+                reply_markup=reply_markup,
+                protect_content=PROTECT_MODE
+            )
+            await asyncio.sleep(0.1)
+            if AUTO_DEL:
+                asyncio.create_task(delete_message(copied, DEL_TIMER))
+                if idx == len(messages) - 1:
+                    last_message = copied
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+            continue
+
+    if AUTO_DEL and last_message:
+        asyncio.create_task(auto_del_notification(client.username, last_message, DEL_TIMER, param))
 
 
-# Create a global dictionary to store chat data
+# ==========================================================================================
+# Force-Subscribe Handler (for unsubscribed users)
+# ==========================================================================================
 chat_data_cache = {}
 
 @Bot.on_message(filters.command('start') & filters.private & ~banUser)
 async def not_joined(client: Client, message: Message):
-    temp = await message.reply(f"<b>??</b>")
-    
+    temp = await message.reply("<b>🔍 Checking your subscription...</b>")
     user_id = message.from_user.id
-               
+
     REQFSUB = await kingdb.get_request_forcesub()
     buttons = []
     count = 0
 
     try:
-        for total, chat_id in enumerate(await kingdb.get_all_channels(), start=1):
-            await message.reply_chat_action(ChatAction.PLAYING)
-            
-            # Show the join button of non-subscribed Channels.....
+        channels = await kingdb.get_all_channels()
+        for total, chat_id in enumerate(channels, start=1):
+            await message.reply_chat_action(ChatAction.TYPING)
+
             if not await is_userJoin(client, user_id, chat_id):
                 try:
-                    # Check if chat data is in cache
+                    # Cache chat data to reduce API calls
                     if chat_id in chat_data_cache:
-                        data = chat_data_cache[chat_id]  # Get data from cache
+                        data = chat_data_cache[chat_id]
                     else:
-                        data = await client.get_chat(chat_id)  # Fetch from API
-                        chat_data_cache[chat_id] = data  # Store in cache
-                    
+                        data = await client.get_chat(chat_id)
+                        chat_data_cache[chat_id] = data
+
                     cname = data.title
-                    
-                    # Handle private channels and links
-                    if REQFSUB and not data.username: 
+                    if REQFSUB and not data.username:
                         link = await kingdb.get_stored_reqLink(chat_id)
                         await kingdb.add_reqChannel(chat_id)
-                        
                         if not link:
                             link = (await client.create_chat_invite_link(chat_id=chat_id, creates_join_request=True)).invite_link
                             await kingdb.store_reqLink(chat_id, link)
                     else:
                         link = data.invite_link
 
-                    # Add button for the chat
                     buttons.append([InlineKeyboardButton(text=cname, url=link)])
                     count += 1
-                    await temp.edit(f"<b>{'! ' * count}</b>")
-                                                            
+                    await temp.edit(f"<b>Checking {count}/{total} channels...</b>")
+
                 except Exception as e:
-                    print(f"Can't Export Channel Name and Link..., Please Check If the Bot is admin in the FORCE SUB CHANNELS:\nProvided Force sub Channel:- {chat_id}")
-                    return await temp.edit(f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Sandalwood_Man</i></b>\n<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>")
+                    print(f"Force-sub error for {chat_id}: {e}")
+                    return await temp.edit(
+                        f"<b><i>⚠️ Error checking subscription. Contact developer @Sandalwood_Man</i></b>\n"
+                        f"<blockquote>Reason: {e}</blockquote>"
+                    )
 
         try:
-            buttons.append([InlineKeyboardButton(text='♻️ Tʀʏ Aɢᴀɪɴ', url=f"{BASE_URL}?start={message.command[1]}")])
+            buttons.append([InlineKeyboardButton(text='♻️ Try Again', url=f"{BASE_URL}?start={message.command[1]}")])
         except IndexError:
             pass
 
-        await message.reply_chat_action(ChatAction.CANCEL)
         await temp.edit(
             text=FORCE_MSG.format(
                 first=message.from_user.first_name,
@@ -266,34 +229,35 @@ async def not_joined(client: Client, message: Message):
                 mention=message.from_user.mention,
                 id=message.from_user.id,
                 count=count,
-                total=total
+                total=len(channels)
             ),
             reply_markup=InlineKeyboardMarkup(buttons),
         )
-                
-        try: 
+        try:
             await message.delete()
-        except: 
+        except:
             pass
-                        
+
     except Exception as e:
-        print(f"Unable to perform forcesub buttons reason : {e}")
-        return await temp.edit(f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Sandalwood_Man</i></b>\n<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>")
+        print(f"Unable to perform force-sub: {e}")
+        return await temp.edit(
+            f"<b><i>⚠️ Error. Contact developer @Sandalwood_Man</i></b>\n<blockquote>Reason: {e}</blockquote>"
+        )
 
 
-#=====================================================================================##
-#......... RESTART COMMAND FOR RESTARTING BOT .......#
-#=====================================================================================##
-
+# ==========================================================================================
+# /restart Command (for Owner)
+# ==========================================================================================
 @Bot.on_message(filters.command('restart') & filters.private & filters.user(OWNER_ID))
 async def restart_bot(client: Client, message: Message):
     print("Restarting bot...")
-    msg = await message.reply(text=f"<b><i><blockquote>⚠️ {client.name} ɢᴏɪɴɢ ᴛᴏ Rᴇsᴛᴀʀᴛ...</blockquote></i></b>")
+    msg = await message.reply("<b><i>⚙️ Restarting bot...</i></b>")
     try:
-        await asyncio.sleep(6)  # Wait for 6 seconds before restarting
+        await asyncio.sleep(6)
         await msg.delete()
-        args = [sys.executable, "main.py"]  # Adjust this if your start file is named differently
-        os.execl(sys.executable, *args)
+        os.execl(sys.executable, sys.executable, "main.py")
     except Exception as e:
-        print(f"Error occured while Restarting the bot: {e}")
-        return await msg.edit_text(f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Shidoteshika1</i></b>\n<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>")
+        print(f"Error during restart: {e}")
+        await msg.edit_text(
+            f"<b><i>⚠️ Error restarting bot. Contact developer @Sandalwood_Man</i></b>\n<blockquote>Reason: {e}</blockquote>"
+        )
