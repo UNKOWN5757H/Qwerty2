@@ -1,4 +1,3 @@
-
 import asyncio
 import os
 import logging
@@ -28,6 +27,8 @@ PORT = os.environ.get("PORT", "8080")
 
 #Database --⚠️ REQUIRED--
 DB_URI = os.environ.get("DATABASE_URL", "mongodb+srv://Filter01:ei62heT4O81OyNyl@Filter01.6kyybcz.mongodb.net/?retryWrites=true&w=majority&appName=Filter01")
+
+BASE_URL = "https://krpicture0.blogspot.com"
 
 DB_NAME = os.environ.get("DATABASE_NAME", "FILESTORE1")
 
