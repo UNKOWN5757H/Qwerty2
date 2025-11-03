@@ -11,7 +11,7 @@ from pyrogram import Client, filters
 from pyrogram.errors import FloodWait
 from plugins.FORMATS import START_MSG, FORCE_MSG
 from pyrogram.enums import ParseMode, ChatAction
-from config import CUSTOM_CAPTION, OWNER_ID, PICS
+from config import CUSTOM_CAPTION, OWNER_ID, PICS, BASE_URL
 from plugins.autoDelete import auto_del_notification, delete_message
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from helper_func import banUser, is_userJoin, is_admin, subscribed, encode, decode, get_messages
@@ -49,7 +49,7 @@ async def start_command(client: Client, message: Message):
         # If user is not premium and shortener is enabled
         if not user_is_premium and short_enabled:
             # Generate short link for non-premium users
-            full_link = f"https://t.me/{client.username}?start={base64_string}"
+            full_link = f"{BASE_URL}?start={base64_string}"
             
             if short_mode == "link":
                 # Per-link mode: shorten every request
@@ -250,10 +250,10 @@ async def not_joined(client: Client, message: Message):
                                                             
                 except Exception as e:
                     print(f"Can't Export Channel Name and Link..., Please Check If the Bot is admin in the FORCE SUB CHANNELS:\nProvided Force sub Channel:- {chat_id}")
-                    return await temp.edit(f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Shidoteshika1</i></b>\n<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>")
+                    return await temp.edit(f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Sandalwood_Man</i></b>\n<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>")
 
         try:
-            buttons.append([InlineKeyboardButton(text='♻️ Tʀʏ Aɢᴀɪɴ', url=f"https://t.me/{client.username}?start={message.command[1]}")])
+            buttons.append([InlineKeyboardButton(text='♻️ Tʀʏ Aɢᴀɪɴ', url=f"{BASE_URL}?start={message.command[1]}")])
         except IndexError:
             pass
 
@@ -278,7 +278,7 @@ async def not_joined(client: Client, message: Message):
                         
     except Exception as e:
         print(f"Unable to perform forcesub buttons reason : {e}")
-        return await temp.edit(f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @JD_Namikaze</i></b>\n<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>")
+        return await temp.edit(f"<b><i>! Eʀʀᴏʀ, Cᴏɴᴛᴀᴄᴛ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴛᴏ sᴏʟᴠᴇ ᴛʜᴇ ɪssᴜᴇs @Sandalwood_Man</i></b>\n<blockquote expandable><b>Rᴇᴀsᴏɴ:</b> {e}</blockquote>")
 
 
 #=====================================================================================##
