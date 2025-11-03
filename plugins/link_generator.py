@@ -13,7 +13,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from bot import Bot
 from config import BASE_URL
 from helper_func import get_message_id, is_admin
-from database import kingdb
+from database import database
 
 
 # ============================================================
