@@ -1,4 +1,6 @@
 from bot import Bot
 
-Bot().run()
+app = Bot()
 
+if __name__ == "__main__":
+    app.run()
